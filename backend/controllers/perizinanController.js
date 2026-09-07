@@ -1,0 +1,94 @@
+const db = require('../config/db');
+
+// 1. Submit Form Perizinan & Upload Surat (Siswa)
+const submitPerizinanSiswa = async (req, res) => {
+    try {
+        const siswaId = req.user.id;
+        const { alasan, keterangan, tanggal_mulai, tanggal_selesai } = req.body;
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Berkas bukti surat izin (PDF/Gambar) wajib diunggah!' });
+        }
+
+        const bukti_file_path = req.file.path.replace(/\\/g, '/'); // Simpan path berkas fisik
+
+        const queryText = `
+            INSERT INTO perizinan (siswa_id, alasan, keterangan, tanggal_mulai, tanggal_selesai, bukti_file_path, status_acc)
+            VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+            RETURNING *;
+        `;
+        const result = await db.query(queryText, [
+            siswaId,
+            alasan,
+            keterangan || '',
+            tanggal_mulai,
+            tanggal_selesai,
+            bukti_file_path
+        ]);
+
+        res.status(201).json({
+            message: 'Pengajuan perizinan berhasil dikirim. Menunggu verifikasi Guru.',
+            perizinan: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error SubmitPerizinanSiswa:', err);
+        res.status(500).json({ message: 'Terjadi kesalahan server.' });
+    }
+};
+
+// 2. Ambil Seluruh Pengajuan Perizinan (Guru)
+const getAllPerizinan = async (req, res) => {
+    try {
+        const queryText = `
+            SELECT 
+                p.*,
+                u.nama AS nama_siswa,
+                u.tingkat_kelas AS kelas,
+                g.nama AS disetujui_oleh_guru
+            FROM perizinan p
+            JOIN users u ON p.siswa_id = u.id
+            LEFT JOIN users g ON p.disetujui_oleh_guru_id = g.id
+            ORDER BY p.created_at DESC;
+        `;
+        const result = await db.query(queryText);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error GetAllPerizinan:', err);
+        res.status(500).json({ message: 'Terjadi kesalahan server.' });
+    }
+};
+
+// 3. Verifikasi ACC / Reject Surat Izin oleh Guru
+const verifyPerizinanGuru = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status_acc } = req.body; // 'approved' atau 'rejected'
+        const guruId = req.user.id;
+
+        if (!['approved', 'rejected'].includes(status_acc)) {
+            return res.status(400).json({ message: 'Status ACC harus approved atau rejected.' });
+        }
+
+        const queryText = `
+            UPDATE perizinan 
+            SET status_acc = $1, disetujui_oleh_guru_id = $2
+            WHERE id = $3
+            RETURNING *;
+        `;
+        const result = await db.query(queryText, [status_acc, guruId, id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Data perizinan tidak ditemukan.' });
+        }
+
+        res.json({
+            message: `Perizinan siswa telah di-${status_acc}!`,
+            perizinan: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Error VerifyPerizinanGuru:', err);
+        res.status(500).json({ message: 'Terjadi kesalahan server.' });
+    }
+};
+
+module.exports = { submitPerizinanSiswa, getAllPerizinan, verifyPerizinanGuru };
