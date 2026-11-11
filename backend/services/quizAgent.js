@@ -31,9 +31,10 @@ class QuizGeneratorAgent {
                 const geminiResult = await this.callGeminiAPI(cleanText, targetCount, fallbackTitle, subjectName);
                 if (geminiResult && geminiResult.questions && geminiResult.questions.length > 0) {
                     console.log(`✅ [QuizGeneratorAgent] Sukses dihasilkan oleh Google Gemini Flash (${geminiResult.questions.length} butir soal).`);
+                    const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
                     return {
                         success: true,
-                        engine: 'Google Gemini 2.0 Flash',
+                        engine: `Google Gemini (${geminiModel})`,
                         provider: 'gemini',
                         suggested_title: geminiResult.suggested_title || fallbackTitle,
                         questions: geminiResult.questions
@@ -54,10 +55,11 @@ class QuizGeneratorAgent {
                 console.log('🤖 [QuizGeneratorAgent] Mencoba pemanggilan Agent via Groq Cloud (Llama 3.3 70B)...');
                 const groqResult = await this.callGroqAPI(cleanText, targetCount, fallbackTitle, subjectName);
                 if (groqResult && groqResult.questions && groqResult.questions.length > 0) {
-                    console.log(`✅ [QuizGeneratorAgent] Sukses dihasilkan oleh Groq Cloud Llama 3.3 (${groqResult.questions.length} butir soal).`);
+                    const groqModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+                    console.log(`✅ [QuizGeneratorAgent] Sukses dihasilkan oleh Groq Cloud ${groqModel} (${groqResult.questions.length} butir soal).`);
                     return {
                         success: true,
-                        engine: 'Groq Cloud (Llama 3.3 70B)',
+                        engine: `Groq Cloud (${groqModel})`,
                         provider: 'groq',
                         suggested_title: groqResult.suggested_title || fallbackTitle,
                         questions: groqResult.questions
@@ -89,10 +91,10 @@ class QuizGeneratorAgent {
      */
     static async callGeminiAPI(text, count, fallbackTitle, subjectName) {
         const apiKey = process.env.GEMINI_API_KEY;
+        const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
         const prompt = this.buildPrompt(text, count, subjectName);
 
-        // Prioritas Gemini 2.0 Flash, dengan fallback URL Gemini 1.5 Flash
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const payload = {
             contents: [
@@ -133,12 +135,13 @@ class QuizGeneratorAgent {
      */
     static async callGroqAPI(text, count, fallbackTitle, subjectName) {
         const apiKey = process.env.GROQ_API_KEY;
+        const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
         const prompt = this.buildPrompt(text, count, subjectName);
 
         const url = 'https://api.groq.com/openai/v1/chat/completions';
 
         const payload = {
-            model: 'llama-3.3-70b-versatile',
+            model: model,
             messages: [
                 {
                     role: 'system',
