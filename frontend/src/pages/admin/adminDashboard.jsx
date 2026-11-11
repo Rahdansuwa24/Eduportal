@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, ShieldCheck, UserX, UserCheck, UserPlus, Plus, Trash2, X, AlertCircle, Edit3, KeyRound, Search, Filter, Calendar, GraduationCap, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, ShieldCheck, UserX, UserCheck, UserPlus, Plus, Trash2, X, AlertCircle, Edit3, KeyRound, Search, Filter, Calendar, GraduationCap, Clock, BarChart3 } from 'lucide-react';
 import { apiFetch } from '@/services/api';
 import { addYears, addMonths, format } from 'date-fns';
+import { SystemAnalytics } from './SystemAnalytics';
 
 export const AdminDashboard = ({ activeTab }) => {
+    const navigate = useNavigate();
     const [usersList, setUsersList] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -279,8 +282,36 @@ export const AdminDashboard = ({ activeTab }) => {
 
     return (
         <div className="space-y-6">
-            {/* Notifikasi Toast Sukses */}
-            {toastMessage && (
+            {/* Top Quick Tab Navigation */}
+            <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3">
+                <button
+                    onClick={() => navigate('/admin?tab=users')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                        activeTab !== 'analytics'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                >
+                    <Users className="w-4 h-4" /> Manajemen Pengguna
+                </button>
+                <button
+                    onClick={() => navigate('/admin?tab=analytics')}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                        activeTab === 'analytics'
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                >
+                    <BarChart3 className="w-4 h-4" /> System Analytics & Monitoring
+                </button>
+            </div>
+
+            {activeTab === 'analytics' ? (
+                <SystemAnalytics />
+            ) : (
+                <>
+                    {/* Notifikasi Toast Sukses */}
+                    {toastMessage && (
                 <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm font-semibold flex items-center justify-between shadow-sm animate-fade-in">
                     <span>{toastMessage}</span>
                     <button onClick={() => setToastMessage('')} className="text-emerald-600 hover:text-emerald-900 text-xs font-bold">✕ Tutup</button>
@@ -973,6 +1004,8 @@ export const AdminDashboard = ({ activeTab }) => {
                         </form>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

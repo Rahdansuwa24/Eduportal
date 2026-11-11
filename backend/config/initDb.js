@@ -94,8 +94,11 @@ const initDatabase = async () => {
           judul_ujian VARCHAR(150) NOT NULL,
           durasi_menit INT NOT NULL,
           status_acc VARCHAR(20) DEFAULT 'pending' CHECK (status_acc IN ('pending', 'approved', 'rejected')),
+          catatan_waka TEXT DEFAULT NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE ujian ADD COLUMN IF NOT EXISTS catatan_waka TEXT DEFAULT NULL;
     `);
 
     // 6. Tabel Detail Soal Ujian (PG & Isian)
@@ -130,6 +133,7 @@ const initDatabase = async () => {
       CREATE TABLE IF NOT EXISTS presensi (
           id SERIAL PRIMARY KEY,
           siswa_id INT REFERENCES users(id) ON DELETE CASCADE,
+          kurikulum_id INT REFERENCES kurikulum(id) ON DELETE CASCADE,
           status VARCHAR(20) CHECK (status IN ('hadir', 'izin', 'alpa', 'menunggu_acc')) NOT NULL DEFAULT 'alpa',
           waktu_absen TIMESTAMP,
           is_late BOOLEAN DEFAULT FALSE,
@@ -137,6 +141,8 @@ const initDatabase = async () => {
           catatan_guru TEXT,
           tanggal DATE DEFAULT CURRENT_DATE
       );
+
+      ALTER TABLE presensi ADD COLUMN IF NOT EXISTS kurikulum_id INT REFERENCES kurikulum(id) ON DELETE CASCADE;
     `);
 
     // 9. Tabel Perizinan & Upload Surat Izin (Siswa & Guru ACC)

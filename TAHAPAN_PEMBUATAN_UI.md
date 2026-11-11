@@ -1,33 +1,30 @@
-# 🎨 Panduan & Tahapan Pembuatan UI EduPortal Pro
-**Tech Stack Frontend:** React (Vite) + Tailwind CSS + shadcn/ui + Lucide Icons + TailAdmin Layout
+# 🎨 Panduan & Tahapan Pembuatan UI: EduPortal Pro
+**Tech Stack Frontend:** React 19 (Vite) + Tailwind CSS + Lucide Icons + Recharts  
+**Status UI:** 100% Selesai & Terintegrasi ke Backend API  
 
 ---
 
-## 📌 Lokasi Terminal
-Sebelum menjalankan perintah di bawah ini, pastikan terminal Anda berada di folder `frontend`:
+## 📌 Lokasi Kerja Frontend
+Direktori kerja frontend:
 ```bash
 cd "d:\Developer\Aplikasi sekolah\frontend"
 ```
 
 ---
 
-## 🚀 Tahap 1: Setup Tailwind CSS v3
+## 🚀 Tahap 1: Setup Tailwind CSS & Styling Base
 
-> 💡 **Dokumentasi Resmi Tailwind v3:** [v3.tailwindcss.com/docs/guides/vite](https://v3.tailwindcss.com/docs/guides/vite)
-
-1. **Install Dependensi Tailwind CSS v3 & PostCSS:**
+1. **Install Dependensi Styling & PostCSS:**
    ```bash
    npm install -D tailwindcss@3 postcss autoprefixer
    ```
 
-2. **Generate File Konfigurasi Tailwind & PostCSS:**
+2. **Inisialisasi Konfigurasi Tailwind & PostCSS:**
    ```bash
    npx tailwindcss init -p
    ```
-   *(Flag `-p` otomatis membuatkan 2 file sekaligus: `tailwind.config.js` dan `postcss.config.js`)*.
 
-3. **Edit File `frontend/tailwind.config.js`:**
-   Sesuaikan bagian `content`:
+3. **Konfigurasi `frontend/tailwind.config.js`:**
    ```javascript
    /** @type {import('tailwindcss').Config} */
    export default {
@@ -41,11 +38,8 @@ cd "d:\Developer\Aplikasi sekolah\frontend"
      plugins: [],
    }
    ```
-   > ❓ **Alasan Bagian `content` Harus Diisi:**  
-   > Tailwind menggunakan sistem *Tree-shaking*. Array `content` memberitahu Tailwind lokasi file React Anda agar Tailwind **hanya meregenerasi class CSS yang benar-benar dipakai saja**. Jika `content` kosong, class Tailwind (seperti `bg-red-500`, `flex`, dll) **tidak akan berfungsi di browser**.
 
-4. **Edit File `frontend/src/index.css`:**
-   Hapus seluruh isi CSS lama dan ganti dengan direktif berikut:
+4. **Direktif Dasar di `frontend/src/index.css`:**
    ```css
    @tailwind base;
    @tailwind components;
@@ -54,14 +48,14 @@ cd "d:\Developer\Aplikasi sekolah\frontend"
 
 ---
 
-## 🔗 Tahap 2: Konfigurasi Path Alias (`@/`) untuk shadcn/ui
+## 🔗 Tahap 2: Konfigurasi Path Alias (`@/`)
 
 1. **Install `@types/node`:**
    ```bash
    npm install -D @types/node
    ```
 
-2. **Edit File `frontend/vite.config.js`:**
+2. **Pengaturan Alias pada `frontend/vite.config.js`:**
    ```javascript
    import path from "path"
    import { defineConfig } from "vite"
@@ -80,7 +74,7 @@ cd "d:\Developer\Aplikasi sekolah\frontend"
    })
    ```
 
-3. **Buat File Baru `frontend/jsconfig.json`:**
+3. **Dukungan Editor Code pada `frontend/jsconfig.json`:**
    ```json
    {
      "compilerOptions": {
@@ -91,68 +85,69 @@ cd "d:\Developer\Aplikasi sekolah\frontend"
      }
    }
    ```
-   > ❓ **Alasan Membuat `jsconfig.json`:**  
-   > `vite.config.js` hanya dibaca oleh bundler Vite saat runtime. File `jsconfig.json` secara khusus memberitahu **VS Code / Code Editor** agar mengenali jalur `@/` sebagai `./src/`, sehingga fitur **Auto-Complete**, **Auto-Import**, dan navigasi kode berjalan lancar tanpa garis merah error.
 
 ---
 
-## 📦 Tahap 3: Inisialisasi shadcn/ui & Install Komponen UI
+## 📦 Tahap 3: Instalasi Library Ikon & Data Visualisasi
 
-> 💡 **Dokumentasi Resmi shadcn/ui Vite:** [ui.shadcn.com/docs/installation/vite](https://ui.shadcn.com/docs/installation/vite)
+```bash
+npm install lucide-react recharts clsx tailwind-merge
+```
 
-1. **Install Library Helper & Lucide Icons:**
-   ```bash
-   npm install lucide-react clsx tailwind-merge class-variance-authority
-   ```
-
-   **Penjelasan & Link Resmi Library Helper:**
-   * 🎨 **`lucide-react`** ([lucide.dev](https://lucide.dev/)): Library ikon SVG modern & ringan khusus React.
-   * 🔀 **`clsx`** ([npmjs.com/package/clsx](https://www.npmjs.com/package/clsx)): Utility untuk mengabungkan class CSS secara kondisional.
-   * 🧩 **`tailwind-merge`** ([npmjs.com/package/tailwind-merge](https://www.npmjs.com/package/tailwind-merge)): Menggabungkan class Tailwind secara cerdas tanpa ada konflik.
-   * 🎛️ **`class-variance-authority` (cva)** ([cva.style/docs](https://cva.style/docs)): Membuat sistem varian komponen UI (contoh: `primary`, `destructive`, `outline`, ukuran `sm`, `lg`).
-
-2. **Inisialisasi shadcn/ui:**
-   ```bash
-   npx shadcn@latest init
-   ```
-   *Pilihan opsi saat init:*
-   - Style: **Default / New York**
-   - Base color: **Slate**
-   - CSS variables: **Yes**
-
-3. **Install Komponen Utama shadcn/ui untuk Fitur PRD:**
-   ```bash
-   npx shadcn@latest add button card badge dialog table tabs select dropdown-menu input toast
-   ```
+* 🎨 **`lucide-react`**: Kumpulan ikon SVG modern dan ringan untuk navigasi dan aksi.
+* 📊 **`recharts`**: Library grafik responsif untuk visualisasi kehadiran mingguan, distribusi peran, dan tren nilai semester.
+* 🔀 **`clsx` & `tailwind-merge`**: Utility penggabungan kelas styling dinamis bebas konflik.
 
 ---
 
-## 📂 Tahap 4: Struktur Folder UI Multi-Role (TailAdmin Layout)
-
-Buat struktur folder berikut di dalam `frontend/src/`:
+## 📂 Tahap 4: Arsitektur Berkas & Komponen UI
 
 ```text
 frontend/src/
+├── assets/
 ├── components/
-│   ├── ui/               <-- Komponen dari shadcn/ui (Button, Card, Badges, dll)
 │   └── layout/
-│       ├── Sidebar.jsx   <-- Navigasi Sidebar Dinamis per Role (TailAdmin)
-│       ├── Header.jsx    <-- Navbar Topbar Profile & Notifications
-│       └── DashboardLayout.jsx
+│       ├── DashboardLayout.jsx  <-- Shell pembungkus halaman
+│       ├── Header.jsx           <-- Topbar profil, role badge, & notifikasi
+│       └── Sidebar.jsx          <-- Navigasi dinamis responsif per role
+├── context/
+│   └── authContext.jsx          <-- State autentikasi global & token JWT
 ├── pages/
-│   ├── admin/            <-- Halaman User Management & Analytics
-│   ├── waka/             <-- Halaman CRUD Mapel & ACC Soal Ujian
-│   ├── guru/             <-- Halaman Upload Materi & AI Quiz Generator
-│   └── siswa/            <-- Halaman Presensi & Quiz Timer Countdown
-└── services/             <-- API Calls ke Backend Express.js
+│   ├── auth/
+│   │   └── LoginPage.jsx        <-- Halaman login + tombol Demo Quick Login
+│   ├── admin/
+│   │   ├── adminDashboard.jsx   <-- Manajemen user CRUD & modal registrasi
+│   │   └── SystemAnalytics.jsx  <-- Visualisasi analitik sistem (Area, Pie, Bar charts)
+│   ├── waka/
+│   │   ├── wakaDashboard.jsx    <-- Dashboard kurikulum & alokasi jadwal
+│   │   ├── ManajemenMapel.jsx   <-- CRUD kurikulum mata pelajaran
+│   │   └── AccSoalUjian.jsx     <-- Verifikasi & review butir soal ujian
+│   ├── guru/
+│   │   ├── guruDashboard.jsx    <-- Shell navigasi guru
+│   │   ├── GuruPresensiOverride.jsx <-- Monitoring presensi & edit kehadiran
+│   │   ├── GuruAccPerizinan.jsx <-- Verifikasi berkas surat izin siswa
+│   │   ├── BankSoalUjian.jsx    <-- Pembuatan paket soal & preview kunci jawaban
+│   │   ├── UnggahMateri.jsx     <-- Upload berkas PDF modul pembelajaran
+│   │   └── AiQuizGenerator.jsx  <-- Ekstraksi otomatis butir kuis dari dokumen PDF
+│   └── siswa/
+│       ├── siswaDashboard.jsx   <-- Shell navigasi siswa
+│       ├── PresensiHarian.jsx   <-- Presensi mandiri per mapel (toleransi 15 menit)
+│       ├── FormPerizinanSiswa.jsx <-- Pengajuan surat izin + unggah berkas bukti
+│       ├── MateriUjianOnline.jsx <-- Baca modul PDF & mesin ujian CBT interaktif
+│       └── GrafikNilaiSemester.jsx <-- Grafik tren nilai 6 semester vs KKM
+└── services/
+    └── api.js                   <-- Handler API Fetch otomatis header JWT & Form-Data
 ```
 
 ---
 
-## 📊 Tahap 5: Instalasi Data Visualization (Recharts)
-
-Untuk visualisasi **Line Chart 6 Semester Siswa** dan **Bar Chart Presensi/Users Admin**:
-
-```bash
-npm install recharts
-```
+## 🎯 Tahap 5: Standar Kualitas Desain & Aksesibilitas
+1. **WCAG AA Contrast**: Rasio kontras teks terhadap latar belakang selalu memenuhi standar keterbacaan tinggi (misal: `text-slate-800` pada latar belakang `bg-white` / `bg-slate-50`).
+2. **State Lengkap**: Setiap komponen data-driven wajib memiliki state:
+   * *Loading State*: Spinner `Loader2` atau skeleton animasi.
+   * *Empty State*: Ilustrasi ikon dan teks panduan jika belum ada data.
+   * *Error State*: Banner peringatan dengan tombol coba lagi (*retry*).
+3. **Responsif Mobile & Desktop**:
+   * Sidebar menggunakan mode *drawer overlay* pada layar smartphone (< 1024px) dan mode *fixed sticky* pada layar desktop.
+   * Tabel dilengkapi pembungkus `overflow-x-auto` agar tidak terpotong pada perangkat layar kecil.
+4. **Anti-Slop Copywriting**: Seluruh teks tombol, lencana, dan notifikasi ditulis secara ringkas, jelas, profesional, serta menghindari tanda baca em dash.

@@ -53,7 +53,7 @@ const getMe = async (req, res) => {
         const userId = req.user.id;
         const result = await db.query('SELECT id, nama, email, role, tingkat_kelas, jurusan, is_active FROM users WHERE id = $1', [userId]);
         if (result.rows.length === 0) {
-            return res.status(444).json({ message: 'User tidak ditemukan.' });
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
         }
         res.json(result.rows[0]);
     } catch (err) {

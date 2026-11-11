@@ -20,7 +20,7 @@ import {
 const roleMenus = {
     admin: [
         { label: 'User Management', icon: Users, id: 'users' },
-        // { label: 'System Analytics', icon: BarChart3, id: 'analytics' },
+        { label: 'System Analytics', icon: BarChart3, id: 'analytics' },
     ],
     waka: [
         { label: 'Jadwal & Waktu Kurikulum', icon: Calendar, id: 'kurikulum' },
@@ -30,6 +30,7 @@ const roleMenus = {
     guru: [
         { label: 'Rekap & Override Presensi', icon: CalendarCheck, id: 'presensi-guru' },
         { label: 'Verifikasi ACC Surat Izin', icon: FileCheck, id: 'acc-izin' },
+        { label: 'Bank Soal & Ujian', icon: BookOpen, id: 'bank-soal' },
         { label: 'Unggah Materi PDF', icon: FileText, id: 'materi' },
         { label: 'AI Quiz Generator', icon: Sparkles, id: 'ai-quiz' },
     ],

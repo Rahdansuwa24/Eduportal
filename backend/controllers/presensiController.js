@@ -163,4 +163,39 @@ const overridePresensiGuru = async (req, res) => {
     }
 };
 
-module.exports = { getPresensiToday, submitPresensiSiswa, overridePresensiGuru };
+// 4. Ambil Riwayat Presensi Siswa Sendiri
+const getMyPresensi = async (req, res) => {
+    try {
+        const siswaId = req.user.id;
+        const queryText = `
+            SELECT 
+                p.id AS presensi_id,
+                p.kurikulum_id,
+                p.status,
+                p.waktu_absen,
+                p.is_late,
+                p.tanggal,
+                p.catatan_guru,
+                k.hari,
+                k.waktu_mulai,
+                k.waktu_selesai,
+                k.ruangan,
+                m.nama_mapel,
+                m.kode_mapel,
+                g.nama AS diubah_oleh_guru
+            FROM presensi p
+            JOIN kurikulum k ON p.kurikulum_id = k.id
+            JOIN mapel m ON k.mapel_id = m.id
+            LEFT JOIN users g ON p.diubah_oleh_guru_id = g.id
+            WHERE p.siswa_id = $1
+            ORDER BY p.tanggal DESC, p.waktu_absen DESC;
+        `;
+        const result = await db.query(queryText, [siswaId]);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error GetMyPresensi:', err);
+        res.status(500).json({ message: 'Terjadi kesalahan server saat mengambil riwayat presensi.' });
+    }
+};
+
+module.exports = { getPresensiToday, submitPresensiSiswa, overridePresensiGuru, getMyPresensi };

@@ -13,6 +13,8 @@ var mapelRouter = require('./routes/mapelRoutes');
 var kurikulumRouter = require('./routes/kurikulumRoutes');
 var presensiRouter = require('./routes/presensiRoutes');
 var perizinanRouter = require('./routes/perizinanRoutes');
+var ujianRouter = require('./routes/ujianRoutes');
+var materiRouter = require('./routes/materiRoutes');
 
 var app = express();
 
@@ -35,6 +37,8 @@ app.use('/api/mapel', mapelRouter);
 app.use('/api/kurikulum', kurikulumRouter);
 app.use('/api/presensi', presensiRouter);
 app.use('/api/perizinan', perizinanRouter);
+app.use('/api/ujian', ujianRouter);
+app.use('/api/materi', materiRouter);
 
 // Root Health Check Route
 app.get('/', function(req, res) {

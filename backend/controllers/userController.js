@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const os = require('os');
 const { addYears, addMonths, format } = require('date-fns');
 const { getAcademicContext } = require('../services/cronScheduler');
 
@@ -259,4 +260,128 @@ const deleteUser = async (req, res) => {
     }
 };
 
-module.exports = { getAllUsers, registerUser, toggleActiveStatus, updateUser, deleteUser, getAcademicInfo };
+// 6. Ambil Data Analitik Sistem & Statistik Sekolah (Admin)
+const getSystemAnalytics = async (req, res) => {
+    try {
+        const [
+            roleDist,
+            statusDist,
+            siswaStatusDist,
+            presensiToday,
+            weeklyPresensi,
+            academicCounts,
+            recentUsers
+        ] = await Promise.all([
+            db.query(`
+                SELECT role, COUNT(*)::int as count 
+                FROM users 
+                GROUP BY role 
+                ORDER BY count DESC
+            `),
+            db.query(`
+                SELECT 
+                    COUNT(CASE WHEN is_active = TRUE THEN 1 END)::int as active_count,
+                    COUNT(CASE WHEN is_active = FALSE THEN 1 END)::int as inactive_count,
+                    COUNT(*)::int as total_count
+                FROM users
+            `),
+            db.query(`
+                SELECT status_siswa, COUNT(*)::int as count 
+                FROM users 
+                WHERE role = 'siswa' 
+                GROUP BY status_siswa
+            `),
+            db.query(`
+                SELECT 
+                    COUNT(*)::int as total_submitted,
+                    COUNT(CASE WHEN status = 'hadir' THEN 1 END)::int as hadir,
+                    COUNT(CASE WHEN status = 'izin' THEN 1 END)::int as izin,
+                    COUNT(CASE WHEN status = 'alpa' THEN 1 END)::int as alpa,
+                    COUNT(CASE WHEN is_late = TRUE THEN 1 END)::int as late
+                FROM presensi 
+                WHERE tanggal = CURRENT_DATE
+            `),
+            db.query(`
+                SELECT 
+                    TO_CHAR(d::date, 'Dy') as hari_en,
+                    TO_CHAR(d::date, 'DD/MM') as tanggal,
+                    COUNT(CASE WHEN p.status = 'hadir' THEN 1 END)::int as hadir,
+                    COUNT(CASE WHEN p.status = 'izin' THEN 1 END)::int as izin,
+                    COUNT(CASE WHEN p.status = 'alpa' THEN 1 END)::int as alpa
+                FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, '1 day'::interval) d
+                LEFT JOIN presensi p ON p.tanggal = d::date
+                GROUP BY d::date
+                ORDER BY d::date ASC
+            `),
+            db.query(`
+                SELECT 
+                    (SELECT COUNT(*)::int FROM mapel) as total_mapel,
+                    (SELECT COUNT(*)::int FROM kurikulum) as total_kurikulum,
+                    (SELECT COUNT(*)::int FROM perizinan) as total_perizinan,
+                    (SELECT COUNT(*)::int FROM perizinan WHERE status_acc = 'pending') as perizinan_pending,
+                    (SELECT COUNT(*)::int FROM perizinan WHERE status_acc = 'approved') as perizinan_approved,
+                    (SELECT COUNT(*)::int FROM ujian) as total_ujian
+            `),
+            db.query(`
+                SELECT id, nama, email, role, tingkat_kelas, is_active, created_at 
+                FROM users 
+                ORDER BY created_at DESC, id DESC 
+                LIMIT 5
+            `)
+        ]);
+
+        const hariMap = {
+            Mon: 'Senin',
+            Tue: 'Selasa',
+            Wed: 'Rabu',
+            Thu: 'Kamis',
+            Fri: 'Jumat',
+            Sat: 'Sabtu',
+            Sun: 'Minggu'
+        };
+
+        const formattedWeekly = weeklyPresensi.rows.map(r => ({
+            hari: hariMap[r.hari_en.trim()] || r.hari_en.trim(),
+            tanggal: r.tanggal,
+            hadir: r.hadir,
+            izin: r.izin,
+            alpa: r.alpa
+        }));
+
+        const memUsage = process.memoryUsage();
+        const systemHealth = {
+            status: 'healthy',
+            serverUptimeSeconds: Math.floor(process.uptime()),
+            nodeVersion: process.version,
+            platform: os.platform(),
+            arch: os.arch(),
+            memory: {
+                rssMB: Math.round(memUsage.rss / 1024 / 1024),
+                heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+                heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+                systemTotalMemMB: Math.round(os.totalmem() / 1024 / 1024),
+                systemFreeMemMB: Math.round(os.freemem() / 1024 / 1024)
+            },
+            database: {
+                status: 'connected',
+                dbName: process.env.DB_NAME || 'eduportal_db'
+            }
+        };
+
+        res.json({
+            roleDistribution: roleDist.rows,
+            statusOverview: statusDist.rows[0] || { active_count: 0, inactive_count: 0, total_count: 0 },
+            siswaStatusDistribution: siswaStatusDist.rows,
+            presensiToday: presensiToday.rows[0] || { total_submitted: 0, hadir: 0, izin: 0, alpa: 0, late: 0 },
+            weeklyPresensi: formattedWeekly,
+            academicCounts: academicCounts.rows[0] || { total_mapel: 0, total_kurikulum: 0, total_perizinan: 0, perizinan_pending: 0, perizinan_approved: 0, total_ujian: 0 },
+            recentUsers: recentUsers.rows,
+            systemHealth
+        });
+    } catch (err) {
+        console.error('Error GetSystemAnalytics:', err);
+        res.status(500).json({ message: 'Gagal mengambil data analitik sistem: ' + err.message });
+    }
+};
+
+module.exports = { getAllUsers, registerUser, toggleActiveStatus, updateUser, deleteUser, getAcademicInfo, getSystemAnalytics };
