@@ -157,6 +157,7 @@ const initDatabase = async () => {
           bukti_file_path VARCHAR(255) NOT NULL,
           status_acc VARCHAR(20) DEFAULT 'pending' CHECK (status_acc IN ('pending', 'approved', 'rejected')),
           disetujui_oleh_guru_id INT REFERENCES users(id) ON DELETE SET NULL,
+          waktu_acc TIMESTAMP,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);

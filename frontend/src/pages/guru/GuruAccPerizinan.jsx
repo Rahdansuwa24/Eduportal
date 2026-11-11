@@ -47,6 +47,30 @@ export const GuruAccPerizinan = () => {
         });
     };
 
+    // Helper periksa batas waktu revisi keputusan (hanya berlaku 1 hari / 24 jam)
+    const getRevisionInfo = (p) => {
+        if (!p.status_acc || p.status_acc === 'pending') {
+            return { allowed: true, text: '' };
+        }
+        const accTimestamp = p.waktu_acc
+            ? new Date(p.waktu_acc).getTime()
+            : new Date(p.created_at).getTime();
+        const diffHours = (Date.now() - accTimestamp) / (1000 * 60 * 60);
+
+        if (diffHours <= 24) {
+            const hoursLeft = Math.max(1, Math.ceil(24 - diffHours));
+            return {
+                allowed: true,
+                text: `Tersisa ~${hoursLeft} jam untuk revisi`
+            };
+        }
+
+        return {
+            allowed: false,
+            text: 'Terkunci permanen (> 24 jam)'
+        };
+    };
+
     const loadPerizinan = async (isManual = false) => {
         if (isManual) setRefreshing(true);
         try {
@@ -304,32 +328,54 @@ export const GuruAccPerizinan = () => {
                                                     </div>
                                                 ) : p.status_acc === 'approved' ? (
                                                     // State Final: Sudah Disetujui
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                                                            <Check className="w-3 h-3 text-emerald-600" /> Final (Tercatat Presensi)
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleAccPerizinan(p.id, 'rejected', namaSiswa)}
-                                                            title="Koreksi: Ubah status menjadi ditolak"
-                                                            className="text-[11px] text-slate-400 hover:text-rose-600 hover:underline px-1 py-1 transition"
-                                                        >
-                                                            Ubah ke Tolak
-                                                        </button>
-                                                    </div>
+                                                    (() => {
+                                                        const revision = getRevisionInfo(p);
+                                                        return (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                                                    <Check className="w-3 h-3 text-emerald-600" /> Final (Tercatat Presensi)
+                                                                </span>
+                                                                {revision.allowed ? (
+                                                                    <button
+                                                                        onClick={() => handleAccPerizinan(p.id, 'rejected', namaSiswa)}
+                                                                        title={`Ubah status menjadi tolak (${revision.text})`}
+                                                                        className="text-[11px] text-slate-400 hover:text-rose-600 hover:underline px-1 py-1 transition"
+                                                                    >
+                                                                        Ubah ke Tolak
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title="Keputusan terkunci permanen karena telah melewati batas 1 hari">
+                                                                        🔒 Terkunci (&gt; 24 Jam)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()
                                                 ) : p.status_acc === 'rejected' ? (
                                                     // State Final: Sudah Ditolak
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
-                                                            <X className="w-3 h-3 text-rose-600" /> Final (Ditolak)
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleAccPerizinan(p.id, 'approved', namaSiswa)}
-                                                            title="Koreksi: Tinjau ulang dan setujui izin ini"
-                                                            className="text-[11px] text-slate-400 hover:text-emerald-600 hover:underline px-1 py-1 transition"
-                                                        >
-                                                            Ubah ke Setujui
-                                                        </button>
-                                                    </div>
+                                                    (() => {
+                                                        const revision = getRevisionInfo(p);
+                                                        return (
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                                                                    <X className="w-3 h-3 text-rose-600" /> Final (Ditolak)
+                                                                </span>
+                                                                {revision.allowed ? (
+                                                                    <button
+                                                                        onClick={() => handleAccPerizinan(p.id, 'approved', namaSiswa)}
+                                                                        title={`Tinjau ulang dan setujui izin ini (${revision.text})`}
+                                                                        className="text-[11px] text-slate-400 hover:text-emerald-600 hover:underline px-1 py-1 transition"
+                                                                    >
+                                                                        Ubah ke Setujui
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded border border-slate-200" title="Keputusan terkunci permanen karena telah melewati batas 1 hari">
+                                                                        🔒 Terkunci (&gt; 24 Jam)
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()
                                                 ) : (
                                                     // State Pending: Tombol Aksi Utama
                                                     <div className="inline-flex items-center gap-2">

@@ -84,7 +84,7 @@ const getMyPerizinan = async (req, res) => {
     }
 };
 
-// 4. Verifikasi ACC / Reject Surat Izin oleh Guru (Dengan Finalisasi ke Presensi Siswa)
+// 4. Verifikasi ACC / Reject Surat Izin oleh Guru (Dengan Batas Revisi 1 Hari & Finalisasi Presensi)
 const verifyPerizinanGuru = async (req, res) => {
     try {
         const { id } = req.params;
@@ -95,22 +95,42 @@ const verifyPerizinanGuru = async (req, res) => {
             return res.status(400).json({ message: 'Status ACC harus approved atau rejected.' });
         }
 
+        // Ambil data perizinan sebelum di-update
+        const checkRecord = await db.query('SELECT * FROM perizinan WHERE id = $1', [id]);
+        if (checkRecord.rows.length === 0) {
+            return res.status(404).json({ message: 'Data perizinan tidak ditemukan.' });
+        }
+
+        const existingPerizinan = checkRecord.rows[0];
+
+        // ATURAN BATAS REVISI 1 HARI (24 JAM):
+        // Jika sebelumnya sudah pernah di-ACC (bukan pending), perubahan keputusan hanya boleh dalam rentang 24 jam.
+        if (existingPerizinan.status_acc !== 'pending') {
+            const accTime = existingPerizinan.waktu_acc
+                ? new Date(existingPerizinan.waktu_acc).getTime()
+                : new Date(existingPerizinan.created_at).getTime();
+            const nowTime = Date.now();
+            const diffHours = (nowTime - accTime) / (1000 * 60 * 60);
+
+            if (diffHours > 24) {
+                return res.status(403).json({
+                    message: 'Batas waktu revisi keputusan perizinan telah kedaluwarsa. Perubahan keputusan (ubah ke tolak/terima) hanya berlaku dalam 1 hari (24 jam) setelah keputusan pertama.'
+                });
+            }
+        }
+
         const queryText = `
             UPDATE perizinan 
-            SET status_acc = $1, disetujui_oleh_guru_id = $2
+            SET status_acc = $1, 
+                disetujui_oleh_guru_id = $2,
+                waktu_acc = COALESCE(waktu_acc, CURRENT_TIMESTAMP)
             WHERE id = $3
             RETURNING *;
         `;
         const result = await db.query(queryText, [status_acc, guruId, id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'Data perizinan tidak ditemukan.' });
-        }
-
         const perizinanRow = result.rows[0];
 
         // FINALISASI KE PRESENSI:
-        // Jika surat izin disetujui (approved), sinkronkan presensi siswa pada jadwal aktif menjadi 'izin'
         if (status_acc === 'approved') {
             const siswaId = perizinanRow.siswa_id;
             const alasanClean = perizinanRow.alasan ? perizinanRow.alasan.replace(/_/g, ' ') : 'Izin Siswa';
@@ -123,7 +143,6 @@ const verifyPerizinanGuru = async (req, res) => {
             );
 
             for (const k of kurikulumList.rows) {
-                // Update jika sudah ada presensi hari ini
                 const updateRes = await db.query(
                     `UPDATE presensi 
                      SET status = 'izin', diubah_oleh_guru_id = $1, catatan_guru = $2
@@ -132,7 +151,6 @@ const verifyPerizinanGuru = async (req, res) => {
                     [guruId, `ACC Surat: ${alasanClean}`, siswaId, k.id]
                 );
 
-                // Jika belum ada, buatkan entri presensi 'izin'
                 if (updateRes.rows.length === 0) {
                     await db.query(
                         `INSERT INTO presensi (siswa_id, kurikulum_id, status, waktu_absen, diubah_oleh_guru_id, catatan_guru, tanggal)
@@ -141,6 +159,15 @@ const verifyPerizinanGuru = async (req, res) => {
                     );
                 }
             }
+        } else if (status_acc === 'rejected') {
+            // Jika sebelumnya sempat disetujui lalu diubah ke tolak dalam 24 jam, kembalikan presensi menjadi 'alpa'
+            const siswaId = perizinanRow.siswa_id;
+            await db.query(
+                `UPDATE presensi 
+                 SET status = 'alpa', diubah_oleh_guru_id = $1, catatan_guru = 'Surat Izin Ditolak Guru'
+                 WHERE siswa_id = $2 AND catatan_guru LIKE 'ACC Surat%' AND tanggal = CURRENT_DATE`,
+                [guruId, siswaId]
+            );
         }
 
         // Ambil nama guru verifikator untuk respon instan di UI
