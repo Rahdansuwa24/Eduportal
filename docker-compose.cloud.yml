@@ -1,0 +1,46 @@
+services:
+  # 1. Backend Express API (Terhubung langsung ke TiDB Cloud via SSL)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: eduportal-backend
+    restart: unless-stopped
+    environment:
+      PORT: 5000
+      DATABASE_URL: ${DATABASE_URL}
+      DB_SSL: ${DB_SSL:-true}
+      JWT_SECRET: ${JWT_SECRET:-rahasia_eduportal_pro_sekolah_2026_super_safe}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "5000:5000"
+    networks:
+      - eduportal-network
+
+  # 2. Frontend React Vite (Nginx Server & Reverse Proxy)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: eduportal-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - eduportal-network
+
+networks:
+  eduportal-network:
+    driver: bridge
+
+volumes:
+  uploads_data:
