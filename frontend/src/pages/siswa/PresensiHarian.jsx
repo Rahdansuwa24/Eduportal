@@ -10,7 +10,10 @@ import {
     Loader2,
     Calendar,
     UserCheck,
-    Check
+    Check,
+    Search,
+    Filter,
+    X
 } from 'lucide-react';
 import { apiFetch } from '@/services/api';
 
@@ -25,7 +28,15 @@ export const PresensiHarian = () => {
     const [submittingMapelId, setSubmittingMapelId] = useState(null);
     const [presensiMsgMap, setPresensiMsgMap] = useState({});
     const [toastMessage, setToastMessage] = useState('');
+
+    // Filter & Search Jadwal (Bagian Atas)
     const [dayFilter, setDayFilter] = useState('today'); // 'today' | 'all' | 'Senin' | 'Selasa' | ...
+    const [searchJadwal, setSearchJadwal] = useState('');
+    const [tipeMapelFilter, setTipeMapelFilter] = useState('all'); // 'all' | 'wajib' | 'peminatan'
+
+    // Filter & Search Riwayat (Bagian Bawah)
+    const [historySearch, setHistorySearch] = useState('');
+    const [historyStatusFilter, setHistoryStatusFilter] = useState('all'); // 'all' | 'hadir' | 'terlambat' | 'izin' | 'alpa'
 
     const showToast = (msg) => {
         setToastMessage(msg);
@@ -190,6 +201,40 @@ export const PresensiHarian = () => {
                     ))}
                 </div>
 
+                {/* Search & Kategori Filter Bar Jadwal */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                    <div className="sm:col-span-8 relative">
+                        <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                            type="text"
+                            placeholder="Cari mata pelajaran, kode mapel, atau ruangan..."
+                            value={searchJadwal}
+                            onChange={(e) => setSearchJadwal(e.target.value)}
+                            className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                        />
+                        {searchJadwal && (
+                            <button
+                                onClick={() => setSearchJadwal('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                    <div className="sm:col-span-4 flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" />
+                        <select
+                            value={tipeMapelFilter}
+                            onChange={(e) => setTipeMapelFilter(e.target.value)}
+                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium"
+                        >
+                            <option value="all">Semua Kategori Mapel</option>
+                            <option value="wajib">Mapel Wajib</option>
+                            <option value="peminatan">Mapel Peminatan</option>
+                        </select>
+                    </div>
+                </div>
+
                 {loading ? (
                     <div className="py-12 flex flex-col items-center justify-center text-slate-400">
                         <Loader2 className="w-8 h-8 animate-spin mb-2 text-indigo-600" />
@@ -197,13 +242,28 @@ export const PresensiHarian = () => {
                     </div>
                 ) : (() => {
                     const displayedJadwal = (jadwalTodayList || []).filter((j) => {
-                        if (dayFilter === 'today') {
-                            return (j.hari || '').toLowerCase() === currentDayName.toLowerCase();
-                        }
-                        if (dayFilter === 'all') {
-                            return true;
-                        }
-                        return (j.hari || '').toLowerCase() === dayFilter.toLowerCase();
+                        // Filter Hari
+                        const matchDay =
+                            dayFilter === 'all'
+                                ? true
+                                : dayFilter === 'today'
+                                ? (j.hari || '').toLowerCase() === currentDayName.toLowerCase()
+                                : (j.hari || '').toLowerCase() === dayFilter.toLowerCase();
+
+                        // Filter Tipe Mapel (Wajib / Peminatan)
+                        const matchTipe =
+                            tipeMapelFilter === 'all'
+                                ? true
+                                : (j.tipe_mapel || '').toLowerCase() === tipeMapelFilter.toLowerCase();
+
+                        // Filter Pencarian Teks
+                        const matchSearch =
+                            !searchJadwal.trim() ||
+                            (j.nama_mapel || '').toLowerCase().includes(searchJadwal.toLowerCase()) ||
+                            (j.kode_mapel || '').toLowerCase().includes(searchJadwal.toLowerCase()) ||
+                            (j.ruangan || '').toLowerCase().includes(searchJadwal.toLowerCase());
+
+                        return matchDay && matchTipe && matchSearch;
                     });
 
                     if (displayedJadwal.length === 0) {
@@ -335,86 +395,179 @@ export const PresensiHarian = () => {
 
             {/* Riwayat Presensi Kehadiran Siswa */}
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                        <h3 className="font-bold text-slate-800 text-base">Riwayat Presensi Siswa</h3>
-                        <p className="text-xs text-slate-500">Daftar rekaman kehadiran Anda pada seluruh sesi belajar</p>
-                    </div>
-                    <span className="text-xs font-medium text-slate-500">
-                        Total {historyPresensi.length} Catatan
-                    </span>
-                </div>
+                {(() => {
+                    const filteredHistory = historyPresensi.filter((p) => {
+                        // Status filter
+                        let matchStatus = true;
+                        if (historyStatusFilter === 'hadir') {
+                            matchStatus = p.status === 'hadir' && !p.is_late;
+                        } else if (historyStatusFilter === 'terlambat') {
+                            matchStatus = p.status === 'hadir' && p.is_late;
+                        } else if (historyStatusFilter === 'izin') {
+                            matchStatus = p.status === 'izin';
+                        } else if (historyStatusFilter === 'alpa') {
+                            matchStatus = p.status === 'alpa';
+                        }
 
-                {historyPresensi.length === 0 ? (
-                    <div className="py-8 text-center text-slate-500 text-xs">
-                        Belum ada rekaman kehadiran. Presensi yang Anda lakukan akan dicatat secara otomatis di sini.
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto border border-slate-200 rounded-lg">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 text-xs">
-                                <tr>
-                                    <th className="p-3.5">Tanggal</th>
-                                    <th className="p-3.5">Mata Pelajaran</th>
-                                    <th className="p-3.5">Jadwal Kelas</th>
-                                    <th className="p-3.5">Waktu Pencatatan</th>
-                                    <th className="p-3.5">Status Kehadiran</th>
-                                    <th className="p-3.5">Keterangan</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-200 text-xs">
-                                {historyPresensi.map((p) => (
-                                    <tr key={p.presensi_id} className="hover:bg-slate-50/70 transition">
-                                        <td className="p-3.5 font-medium text-slate-800">
-                                            {p.tanggal
-                                                ? new Date(p.tanggal).toLocaleDateString('id-ID', {
-                                                      weekday: 'long',
-                                                      day: 'numeric',
-                                                      month: 'short',
-                                                      year: 'numeric'
-                                                  })
-                                                : '-'}
-                                        </td>
-                                        <td className="p-3.5 font-semibold text-slate-800">
-                                            {p.nama_mapel} ({p.kode_mapel})
-                                        </td>
-                                        <td className="p-3.5 text-slate-500 font-mono text-[11px]">
-                                            {p.hari}, {p.waktu_mulai ? p.waktu_mulai.substring(0, 5) : ''} - {p.waktu_selesai ? p.waktu_selesai.substring(0, 5) : ''}
-                                        </td>
-                                        <td className="p-3.5 font-mono text-[11px] text-slate-600">
-                                            {p.waktu_absen
-                                                ? new Date(p.waktu_absen).toLocaleTimeString('id-ID', {
-                                                      hour: '2-digit',
-                                                      minute: '2-digit'
-                                                  }) + ' WIB'
-                                                : '-'}
-                                        </td>
-                                        <td className="p-3.5">
-                                            <span
-                                                className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase inline-flex items-center gap-1 ${
-                                                    p.status === 'hadir'
-                                                        ? p.is_late
-                                                            ? 'bg-amber-100 text-amber-800'
-                                                            : 'bg-emerald-100 text-emerald-800'
-                                                        : p.status === 'izin'
-                                                        ? 'bg-blue-100 text-blue-800'
-                                                        : 'bg-rose-100 text-rose-800'
-                                                }`}
-                                            >
-                                                {p.status === 'hadir' && !p.is_late && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
-                                                {p.status === 'hadir' && p.is_late && <Clock className="w-3 h-3 text-amber-600" />}
-                                                <span>{p.is_late ? 'Terlambat' : p.status}</span>
-                                            </span>
-                                        </td>
-                                        <td className="p-3.5 text-slate-500 text-[11px] italic">
-                                            {p.catatan_guru ? `Catatan Guru: ${p.catatan_guru}` : '-'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                        // Search text
+                        let matchSearch = true;
+                        if (historySearch.trim()) {
+                            const q = historySearch.toLowerCase();
+                            const dateStr = p.tanggal
+                                ? new Date(p.tanggal).toLocaleDateString('id-ID', {
+                                      weekday: 'long',
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric'
+                                  }).toLowerCase()
+                                : '';
+                            matchSearch =
+                                (p.nama_mapel || '').toLowerCase().includes(q) ||
+                                (p.kode_mapel || '').toLowerCase().includes(q) ||
+                                (p.hari || '').toLowerCase().includes(q) ||
+                                (p.catatan_guru || '').toLowerCase().includes(q) ||
+                                dateStr.includes(q);
+                        }
+
+                        return matchStatus && matchSearch;
+                    });
+
+                    return (
+                        <>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 gap-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-800 text-base">Riwayat Presensi Siswa</h3>
+                                    <p className="text-xs text-slate-500">Daftar rekaman kehadiran Anda pada seluruh sesi belajar</p>
+                                </div>
+                                <span className="text-xs font-medium text-slate-500">
+                                    Total {filteredHistory.length} dari {historyPresensi.length} Catatan
+                                </span>
+                            </div>
+
+                            {/* Filter & Search Bar Riwayat */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
+                                <div className="sm:col-span-8 relative">
+                                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                    <input
+                                        type="text"
+                                        placeholder="Cari riwayat (mapel, kode, catatan, atau hari)..."
+                                        value={historySearch}
+                                        onChange={(e) => setHistorySearch(e.target.value)}
+                                        className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                    />
+                                    {historySearch && (
+                                        <button
+                                            onClick={() => setHistorySearch('')}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="sm:col-span-4 flex items-center gap-2">
+                                    <Filter className="w-4 h-4 text-slate-400 shrink-0 hidden sm:block" />
+                                    <select
+                                        value={historyStatusFilter}
+                                        onChange={(e) => setHistoryStatusFilter(e.target.value)}
+                                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 font-medium"
+                                    >
+                                        <option value="all">Semua Status Kehadiran</option>
+                                        <option value="hadir">Hadir (Tepat Waktu)</option>
+                                        <option value="terlambat">Hadir Terlambat</option>
+                                        <option value="izin">Izin</option>
+                                        <option value="alpa">Alpa / Belum Hadir</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {historyPresensi.length === 0 ? (
+                                <div className="py-8 text-center text-slate-500 text-xs">
+                                    Belum ada rekaman kehadiran. Presensi yang Anda lakukan akan dicatat secara otomatis di sini.
+                                </div>
+                            ) : filteredHistory.length === 0 ? (
+                                <div className="py-8 text-center text-slate-500 text-xs border border-dashed border-slate-200 rounded-lg space-y-2">
+                                    <p className="font-semibold text-slate-600">
+                                        Tidak ada riwayat presensi yang sesuai dengan kriteria pencarian atau filter.
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            setHistorySearch('');
+                                            setHistoryStatusFilter('all');
+                                        }}
+                                        className="text-xs text-indigo-600 font-bold hover:underline cursor-pointer"
+                                    >
+                                        Reset Filter & Pencarian
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 text-xs">
+                                            <tr>
+                                                <th className="p-3.5">Tanggal</th>
+                                                <th className="p-3.5">Mata Pelajaran</th>
+                                                <th className="p-3.5">Jadwal Kelas</th>
+                                                <th className="p-3.5">Waktu Pencatatan</th>
+                                                <th className="p-3.5">Status Kehadiran</th>
+                                                <th className="p-3.5">Keterangan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-200 text-xs">
+                                            {filteredHistory.map((p) => (
+                                                <tr key={p.presensi_id} className="hover:bg-slate-50/70 transition">
+                                                    <td className="p-3.5 font-medium text-slate-800">
+                                                        {p.tanggal
+                                                            ? new Date(p.tanggal).toLocaleDateString('id-ID', {
+                                                                  weekday: 'long',
+                                                                  day: 'numeric',
+                                                                  month: 'short',
+                                                                  year: 'numeric'
+                                                              })
+                                                            : '-'}
+                                                    </td>
+                                                    <td className="p-3.5 font-semibold text-slate-800">
+                                                        {p.nama_mapel} ({p.kode_mapel})
+                                                    </td>
+                                                    <td className="p-3.5 text-slate-500 font-mono text-[11px]">
+                                                        {p.hari}, {p.waktu_mulai ? p.waktu_mulai.substring(0, 5) : ''} - {p.waktu_selesai ? p.waktu_selesai.substring(0, 5) : ''}
+                                                    </td>
+                                                    <td className="p-3.5 font-mono text-[11px] text-slate-600">
+                                                        {p.waktu_absen
+                                                            ? new Date(p.waktu_absen).toLocaleTimeString('id-ID', {
+                                                                  hour: '2-digit',
+                                                                  minute: '2-digit'
+                                                              }) + ' WIB'
+                                                            : '-'}
+                                                    </td>
+                                                    <td className="p-3.5">
+                                                        <span
+                                                            className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase inline-flex items-center gap-1 ${
+                                                                p.status === 'hadir'
+                                                                    ? p.is_late
+                                                                        ? 'bg-amber-100 text-amber-800'
+                                                                        : 'bg-emerald-100 text-emerald-800'
+                                                                    : p.status === 'izin'
+                                                                    ? 'bg-blue-100 text-blue-800'
+                                                                    : 'bg-rose-100 text-rose-800'
+                                                            }`}
+                                                        >
+                                                            {p.status === 'hadir' && !p.is_late && <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                                                            {p.status === 'hadir' && p.is_late && <Clock className="w-3 h-3 text-amber-600" />}
+                                                            <span>{p.is_late ? 'Terlambat' : p.status}</span>
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-3.5 text-slate-500 text-[11px] italic">
+                                                        {p.catatan_guru ? `Catatan Guru: ${p.catatan_guru}` : '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </>
+                    );
+                })()}
             </div>
         </div>
     );
