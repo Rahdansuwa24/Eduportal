@@ -294,8 +294,8 @@ export const FormPerizinanSiswa = () => {
                                                 <div className="font-bold capitalize text-slate-900">
                                                     {item.alasan.replace('_', ' ')}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500">
-                                                    {item.keterangan || 'Tidak ada keterangan tambahan'}
+                                                <div className="text-xs font-medium text-slate-700 mt-0.5">
+                                                    {item.keterangan ? `"${item.keterangan}"` : <span className="text-slate-400 italic">Tidak ada keterangan tambahan</span>}
                                                 </div>
                                             </td>
                                             <td className="p-3.5 text-slate-600 font-mono text-[11px]">

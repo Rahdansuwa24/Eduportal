@@ -267,9 +267,12 @@ export const GuruAccPerizinan = () => {
                                                     </span>
                                                 </div>
                                                 {p.keterangan && (
-                                                    <p className="text-[11px] text-slate-400 italic mt-1 line-clamp-1" title={p.keterangan}>
-                                                        "{p.keterangan}"
-                                                    </p>
+                                                    <div className="mt-1.5">
+                                                        <span className="text-xs font-medium text-slate-800 bg-slate-100/90 px-2.5 py-1 rounded-md border border-slate-200 inline-flex items-center gap-1 shadow-2xs" title={p.keterangan}>
+                                                            <span className="text-slate-500 font-normal">Keterangan:</span>
+                                                            <span className="font-semibold text-indigo-950">"{p.keterangan}"</span>
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </td>
 
