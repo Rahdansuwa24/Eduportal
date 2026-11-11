@@ -40,14 +40,39 @@ export const PresensiHarian = () => {
             setHistoryPresensi(myPresensiData || []);
 
             // Petakan status presensi hari ini jika sudah absen
-            const todayStr = new Date().toISOString().split('T')[0];
+            // Menggunakan pemformatan tanggal lokal (YYYY-MM-DD) agar akurat terlepas dari timezone UTC
+            const toLocalDateStr = (d) => {
+                if (!d) return '';
+                const date = new Date(d);
+                if (isNaN(date.getTime())) return '';
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+
+            const todayLocal = toLocalDateStr(new Date());
             const map = {};
-            (myPresensiData || []).forEach(p => {
-                const recordDate = p.tanggal ? p.tanggal.split('T')[0] : '';
-                if (recordDate === todayStr) {
-                    map[p.kurikulum_id] = p.is_late
-                        ? `Sudah Absen (Terlambat - Jam ${p.waktu_absen ? p.waktu_absen.substring(11, 16) : ''} WIB)`
-                        : `Sudah Hadir Tepat Waktu (Jam ${p.waktu_absen ? p.waktu_absen.substring(11, 16) : ''} WIB)`;
+
+            (myPresensiData || []).forEach((p) => {
+                const dateFromDb = p.tanggal_str || toLocalDateStr(p.tanggal);
+                const dateFromAbsen = p.waktu_absen ? toLocalDateStr(p.waktu_absen) : '';
+
+                // Cocok jika tanggal DB atau tanggal waktu_absen sama dengan hari ini
+                const isToday = (dateFromDb === todayLocal) || (dateFromAbsen === todayLocal);
+
+                if (isToday && p.kurikulum_id) {
+                    const jamStr = p.waktu_absen
+                        ? new Date(p.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                        : '';
+                    map[p.kurikulum_id] = {
+                        is_late: Boolean(p.is_late),
+                        status: p.status || 'hadir',
+                        waktu: jamStr,
+                        label: p.is_late
+                            ? `Sudah Absen (Terlambat - Jam ${jamStr} WIB)`
+                            : `Sudah Hadir Tepat Waktu (Jam ${jamStr} WIB)`
+                    };
                 }
             });
             setPresensiMsgMap(map);
@@ -174,9 +199,34 @@ export const PresensiHarian = () => {
                                     </div>
 
                                     {isSubmitted ? (
-                                        <div className="p-2.5 bg-emerald-100/70 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-semibold flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span>{isSubmitted}</span>
+                                        <div className="space-y-2 pt-1">
+                                            <div
+                                                className={`p-2.5 rounded-lg border text-xs font-semibold flex items-center justify-between ${
+                                                    isSubmitted.is_late
+                                                        ? 'bg-amber-100/70 border-amber-300 text-amber-900'
+                                                        : 'bg-emerald-100/70 border-emerald-300 text-emerald-900'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {isSubmitted.is_late ? (
+                                                        <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                                                    ) : (
+                                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                    )}
+                                                    <span>{isSubmitted.label}</span>
+                                                </div>
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-white/80 border border-slate-200">
+                                                    Tercatat
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="w-full py-2 bg-slate-100 text-slate-400 rounded-lg font-semibold text-xs border border-slate-200 cursor-not-allowed flex items-center justify-center gap-1.5 opacity-80"
+                                            >
+                                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>Anda Sudah Presensi Hari Ini</span>
+                                            </button>
                                         </div>
                                     ) : (
                                         <div className="pt-2">

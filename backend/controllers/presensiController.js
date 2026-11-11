@@ -77,38 +77,24 @@ const submitPresensiSiswa = async (req, res) => {
         const isLate = nowInMinutes > (startTimeInMinutes + 15);
         const status = 'hadir';
 
-        // Upsert Presensi Per Mapel Hari Ini
-        const queryText = `
-            INSERT INTO presensi (siswa_id, kurikulum_id, status, waktu_absen, is_late, tanggal)
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_DATE)
-            ON CONFLICT (id) DO UPDATE 
-            SET status = EXCLUDED.status, waktu_absen = CURRENT_TIMESTAMP, is_late = EXCLUDED.is_late
-            RETURNING *;
-        `;
-
-        // Check if record exists for today for this (siswa_id, kurikulum_id)
+        // Validasi: Cek apakah siswa sudah melakukan presensi untuk mapel ini hari ini
         const existingRecord = await db.query(
-            `SELECT id FROM presensi WHERE siswa_id = $1 AND kurikulum_id = $2 AND tanggal = CURRENT_DATE`,
+            `SELECT id, waktu_absen, is_late FROM presensi WHERE siswa_id = $1 AND kurikulum_id = $2 AND tanggal = CURRENT_DATE`,
             [siswaId, kurikulum_id]
         );
 
-        let result;
         if (existingRecord.rows.length > 0) {
-            const updateQuery = `
-                UPDATE presensi 
-                SET status = $1, waktu_absen = CURRENT_TIMESTAMP, is_late = $2
-                WHERE id = $3
-                RETURNING *;
-            `;
-            result = await db.query(updateQuery, [status, isLate, existingRecord.rows[0].id]);
-        } else {
-            const insertQuery = `
-                INSERT INTO presensi (siswa_id, kurikulum_id, status, waktu_absen, is_late, tanggal)
-                VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_DATE)
-                RETURNING *;
-            `;
-            result = await db.query(insertQuery, [siswaId, kurikulum_id, status, isLate]);
+            return res.status(400).json({
+                message: `Anda sudah melakukan presensi untuk mata pelajaran "${jadwal.nama_mapel}" hari ini dan tidak dapat melakukan absensi ulang.`
+            });
         }
+
+        const insertQuery = `
+            INSERT INTO presensi (siswa_id, kurikulum_id, status, waktu_absen, is_late, tanggal)
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, CURRENT_DATE)
+            RETURNING *;
+        `;
+        const result = await db.query(insertQuery, [siswaId, kurikulum_id, status, isLate]);
 
         res.json({
             message: isLate 
@@ -174,6 +160,7 @@ const getMyPresensi = async (req, res) => {
                 p.status,
                 p.waktu_absen,
                 p.is_late,
+                TO_CHAR(p.tanggal, 'YYYY-MM-DD') AS tanggal_str,
                 p.tanggal,
                 p.catatan_guru,
                 k.hari,
