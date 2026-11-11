@@ -1,6 +1,7 @@
 const db = require('../config/db');
 const { PDFParse } = require('pdf-parse');
 const { generateQuestionsFromText } = require('../utils/aiQuizHelper');
+const QuizGeneratorAgent = require('../services/quizAgent');
 
 // 1. Ambil Seluruh Daftar Ujian (dengan Filter & Jumlah Soal)
 const getAllUjian = async (req, res) => {
@@ -260,17 +261,24 @@ const generateAiQuiz = async (req, res) => {
         }
 
         const questionCount = parseInt(req.body.jumlah_soal || '5', 10);
-        const questions = generateQuestionsFromText(fullText, questionCount);
+        const subjectName = req.body.nama_mapel || '';
 
-        const docName = req.file.originalname.replace(/\.pdf$/i, '');
-        const suggestedTitle = `Kuis Evaluasi: ${docName}`;
+        // Eksekusi perumusan soal via QuizGeneratorAgent (Gemini -> Groq -> Local Fallback)
+        const agentResult = await QuizGeneratorAgent.generateQuiz({
+            pdfText: fullText,
+            questionCount: questionCount,
+            documentName: req.file.originalname,
+            subjectName: subjectName
+        });
 
         res.json({
-            message: 'Draft kuis berhasil dibuat secara otomatis oleh AI!',
+            message: `Draft kuis berhasil dirumuskan secara otomatis oleh ${agentResult.engine}!`,
             document_name: req.file.originalname,
             total_characters: fullText.length,
-            suggested_title: suggestedTitle,
-            questions: questions
+            suggested_title: agentResult.suggested_title,
+            engine: agentResult.engine,
+            provider: agentResult.provider,
+            questions: agentResult.questions
         });
     } catch (err) {
         console.error('Error GenerateAiQuiz:', err);

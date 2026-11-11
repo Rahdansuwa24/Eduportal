@@ -278,13 +278,21 @@ export const AiQuizGenerator = () => {
                                     Draft Soal Hasil Generasi AI ({questions.length} Soal)
                                 </span>
                                 <span className="text-[11px] text-slate-500">
-                                    Sumber: {aiResult.document_name} • {aiResult.total_characters} karakter teks berhasil diproses
+                                    Sumber: {aiResult.document_name} • {aiResult.total_characters} karakter teks
                                 </span>
                             </div>
-                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md self-start sm:self-auto flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5" />
-                                Siap Ditinjau & Disimpan
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {aiResult.engine && (
+                                    <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 text-[11px] font-bold rounded-md flex items-center gap-1 border border-indigo-200">
+                                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                                        <span>{aiResult.engine}</span>
+                                    </span>
+                                )}
+                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md flex items-center gap-1">
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Siap Disimpan</span>
+                                </span>
+                            </div>
                         </div>
 
                         {/* Pengaturan Paket Ujian Sebelum Disimpan */}
