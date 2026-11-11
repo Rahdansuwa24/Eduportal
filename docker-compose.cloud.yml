@@ -1,5 +1,5 @@
 services:
-  # 1. Backend Express API (Terhubung langsung ke TiDB Cloud via SSL)
+  # 1. Backend Express API (Terhubung langsung ke Cloud Database via SSL)
   backend:
     build:
       context: ./backend
@@ -17,12 +17,10 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
     volumes:
       - uploads_data:/app/uploads
-    ports:
-      - "5000:5000"
     networks:
       - eduportal-network
 
-  # 2. Frontend React Vite (Nginx Server & Reverse Proxy)
+  # 2. Frontend React Vite
   frontend:
     build:
       context: ./frontend
@@ -31,9 +29,31 @@ services:
         VITE_API_BASE_URL: /api
     container_name: eduportal-frontend
     restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - eduportal-network
+
+  # 3. Reverse Proxy & Automatic SSL/HTTPS (Caddy)
+  caddy:
+    image: caddy:2-alpine
+    container_name: eduportal-caddy
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@sekolah.sch.id}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
+      - frontend
       - backend
     networks:
       - eduportal-network
@@ -44,3 +64,5 @@ networks:
 
 volumes:
   uploads_data:
+  caddy_data:
+  caddy_config:

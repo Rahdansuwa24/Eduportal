@@ -1,0 +1,21 @@
+{
+    # Global options
+    email {$ACME_EMAIL:admin@sekolah.sch.id}
+}
+
+{$DOMAIN:localhost} {
+    # Reverse proxy API ke Backend Express
+    handle /api/* {
+        reverse_proxy backend:5000
+    }
+
+    # Reverse proxy berkas upload ke Backend Express
+    handle /uploads/* {
+        reverse_proxy backend:5000
+    }
+
+    # Reverse proxy SPA ke Frontend React
+    handle {
+        reverse_proxy frontend:80
+    }
+}

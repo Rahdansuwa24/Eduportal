@@ -49,7 +49,7 @@ services:
     networks:
       - eduportal-network
 
-  # 3. Service Frontend React Vite + Nginx Reverse Proxy
+  # 3. Service Frontend React Vite
   frontend:
     build:
       context: ./frontend
@@ -58,9 +58,31 @@ services:
         VITE_API_BASE_URL: /api
     container_name: eduportal-frontend
     restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    networks:
+      - eduportal-network
+
+  # 4. Service Reverse Proxy & Automatic SSL/HTTPS (Caddy)
+  caddy:
+    image: caddy:2-alpine
+    container_name: eduportal-caddy
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@sekolah.sch.id}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
+      - frontend
       - backend
     networks:
       - eduportal-network
@@ -72,3 +94,5 @@ networks:
 volumes:
   pgdata:
   uploads_data:
+  caddy_data:
+  caddy_config:
