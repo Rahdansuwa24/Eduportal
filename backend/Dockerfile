@@ -2,8 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install curl untuk healthcheck container
-RUN apk add --no-cache curl
+# Install curl untuk healthcheck dan tzdata untuk zona waktu WIB (Asia/Jakarta)
+RUN apk add --no-cache curl tzdata
+ENV TZ=Asia/Jakarta
 
 # Salin manifest dependensi terlebih dahulu untuk optimasi caching layer Docker
 COPY package*.json ./

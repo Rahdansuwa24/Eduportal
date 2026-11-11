@@ -17,8 +17,9 @@ const poolConfig = process.env.DATABASE_URL
 
 const pool = new Pool(poolConfig);
 
-pool.on('connect', () => {
-    console.log('⚡ Terhubung ke Database PostgreSQL:', process.env.DB_NAME || 'Cloud DB');
+pool.on('connect', (client) => {
+    client.query("SET timezone = 'Asia/Jakarta'");
+    console.log('⚡ Terhubung ke Database PostgreSQL (Timezone: Asia/Jakarta):', process.env.DB_NAME || 'Cloud DB');
 });
 
 pool.on('error', (err) => {

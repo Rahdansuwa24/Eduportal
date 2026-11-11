@@ -68,9 +68,31 @@ const submitPresensiSiswa = async (req, res) => {
         const jadwal = kurikulumCheck.rows[0];
         const now = new Date();
 
-        // Validasi Hari: Pastikan mapel yang di-absen dijadwalkan pada hari ini
-        const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-        const currentDayName = dayNames[now.getDay()];
+        // Gunakan zona waktu Indonesia Barat (WIB / Asia/Jakarta) secara presisi
+        const wibParts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Jakarta',
+            hour12: false,
+            hour: 'numeric',
+            minute: 'numeric',
+            weekday: 'long'
+        }).formatToParts(now);
+
+        const getPart = (type) => (wibParts.find((p) => p.type === type) || {}).value;
+        const wibHour = parseInt(getPart('hour') || '0', 10);
+        const wibMinute = parseInt(getPart('minute') || '0', 10);
+        const wibWeekday = getPart('weekday');
+
+        // Validasi Hari: Pastikan mapel yang di-absen dijadwalkan pada hari ini (WIB)
+        const dayMap = {
+            'Sunday': 'Minggu',
+            'Monday': 'Senin',
+            'Tuesday': 'Selasa',
+            'Wednesday': 'Rabu',
+            'Thursday': 'Kamis',
+            'Friday': 'Jumat',
+            'Saturday': 'Sabtu'
+        };
+        const currentDayName = dayMap[wibWeekday] || 'Senin';
 
         if (jadwal.hari && jadwal.hari.toLowerCase() !== currentDayName.toLowerCase()) {
             return res.status(400).json({
@@ -78,12 +100,10 @@ const submitPresensiSiswa = async (req, res) => {
             });
         }
 
-        const currentTimeStr = now.toTimeString().split(' ')[0]; // 'HH:mm:ss'
-
-        // Cek Keterlambatan: Jika absen lebih dari 15 menit setelah waktu_mulai mapel
+        // Cek Keterlambatan: Jika absen lebih dari 15 menit setelah waktu_mulai mapel (WIB)
         const [hStart, mStart] = jadwal.waktu_mulai.split(':').map(Number);
         const startTimeInMinutes = hStart * 60 + mStart;
-        const nowInMinutes = now.getHours() * 60 + now.getMinutes();
+        const nowInMinutes = wibHour * 60 + wibMinute;
 
         const isLate = nowInMinutes > (startTimeInMinutes + 15);
         const status = 'hadir';
