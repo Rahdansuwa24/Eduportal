@@ -84,7 +84,7 @@ const getMyPerizinan = async (req, res) => {
     }
 };
 
-// 4. Verifikasi ACC / Reject Surat Izin oleh Guru
+// 4. Verifikasi ACC / Reject Surat Izin oleh Guru (Dengan Finalisasi ke Presensi Siswa)
 const verifyPerizinanGuru = async (req, res) => {
     try {
         const { id } = req.params;
@@ -107,13 +107,56 @@ const verifyPerizinanGuru = async (req, res) => {
             return res.status(404).json({ message: 'Data perizinan tidak ditemukan.' });
         }
 
+        const perizinanRow = result.rows[0];
+
+        // FINALISASI KE PRESENSI:
+        // Jika surat izin disetujui (approved), sinkronkan presensi siswa pada jadwal aktif menjadi 'izin'
+        if (status_acc === 'approved') {
+            const siswaId = perizinanRow.siswa_id;
+            const alasanClean = perizinanRow.alasan ? perizinanRow.alasan.replace(/_/g, ' ') : 'Izin Siswa';
+
+            const kurikulumList = await db.query(
+                `SELECT k.id FROM kurikulum k 
+                 JOIN users u ON u.tingkat_kelas = k.tingkat_kelas 
+                 WHERE u.id = $1`,
+                [siswaId]
+            );
+
+            for (const k of kurikulumList.rows) {
+                // Update jika sudah ada presensi hari ini
+                const updateRes = await db.query(
+                    `UPDATE presensi 
+                     SET status = 'izin', diubah_oleh_guru_id = $1, catatan_guru = $2
+                     WHERE siswa_id = $3 AND kurikulum_id = $4 AND tanggal = CURRENT_DATE
+                     RETURNING id`,
+                    [guruId, `ACC Surat: ${alasanClean}`, siswaId, k.id]
+                );
+
+                // Jika belum ada, buatkan entri presensi 'izin'
+                if (updateRes.rows.length === 0) {
+                    await db.query(
+                        `INSERT INTO presensi (siswa_id, kurikulum_id, status, waktu_absen, diubah_oleh_guru_id, catatan_guru, tanggal)
+                         VALUES ($1, $2, 'izin', CURRENT_TIMESTAMP, $3, $4, CURRENT_DATE)`,
+                        [siswaId, k.id, guruId, `ACC Surat: ${alasanClean}`]
+                    );
+                }
+            }
+        }
+
+        // Ambil nama guru verifikator untuk respon instan di UI
+        const guruUser = await db.query('SELECT nama FROM users WHERE id = $1', [guruId]);
+        const guruNama = guruUser.rows[0]?.nama || 'Guru Pengampu';
+
         res.json({
-            message: `Perizinan siswa telah di-${status_acc}!`,
-            perizinan: result.rows[0]
+            message: `Surat perizinan berhasil ${status_acc === 'approved' ? 'disetujui dan difinalisasi ke rekap presensi siswa' : 'ditolak'}!`,
+            perizinan: {
+                ...perizinanRow,
+                disetujui_oleh_guru: guruNama
+            }
         });
     } catch (err) {
         console.error('Error VerifyPerizinanGuru:', err);
-        res.status(500).json({ message: 'Terjadi kesalahan server.' });
+        res.status(500).json({ message: 'Terjadi kesalahan server saat memverifikasi perizinan.' });
     }
 };
 
