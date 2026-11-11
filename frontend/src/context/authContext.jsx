@@ -24,6 +24,8 @@ export const AuthProvider = ({ children }) => {
                     localStorage.removeItem('token');
                     setIsAuthenticated(false);
                 }
+            } else {
+                setIsAuthenticated(false);
             }
             setLoading(false);
         };
@@ -44,10 +46,18 @@ export const AuthProvider = ({ children }) => {
         return data;
     };
 
-    // Quick Role Switcher (untuk Kemudahan Demo / Testing)
-    const switchDemoRole = (role) => {
-        setCurrentRole(role);
-        setIsAuthenticated(true);
+    // Quick Role Switcher (Melakukan Real Login ke Backend agar Token JWT Resmi Dihasilkan)
+    const switchDemoRole = async (role) => {
+        const dummyEmails = {
+            admin: 'admin@sekolah.sch.id',
+            waka: 'waka@sekolah.sch.id',
+            guru: 'budi@sekolah.sch.id',
+            siswa: 'siti@sekolah.sch.id',
+        };
+        const targetEmail = dummyEmails[role];
+        if (targetEmail) {
+            return await login(targetEmail, 'password123');
+        }
     };
 
     const logout = () => {

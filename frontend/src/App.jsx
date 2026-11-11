@@ -32,7 +32,8 @@ const ProtectedRoute = ({ allowedRole, children }) => {
     }
   }, [tabFromUrl, allowedRole]);
 
-  if (!isAuthenticated) {
+  const token = localStorage.getItem('token');
+  if (!isAuthenticated || !token) {
     return <Navigate to="/login" replace />;
   }
 
@@ -50,7 +51,8 @@ const ProtectedRoute = ({ allowedRole, children }) => {
 // Halaman Redirect Cerdas di Route Root `/`
 const RootRedirect = () => {
   const { isAuthenticated, currentRole } = useAuth();
-  if (!isAuthenticated) {
+  const token = localStorage.getItem('token');
+  if (!isAuthenticated || !token) {
     return <Navigate to="/login" replace />;
   }
   return <Navigate to={`/${currentRole}`} replace />;
@@ -59,7 +61,8 @@ const RootRedirect = () => {
 // Halaman Login Route `/login`
 const LoginRoute = () => {
   const { isAuthenticated, currentRole } = useAuth();
-  if (isAuthenticated) {
+  const token = localStorage.getItem('token');
+  if (isAuthenticated && token) {
     return <Navigate to={`/${currentRole}`} replace />;
   }
   return <LoginPage />;

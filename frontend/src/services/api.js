@@ -38,9 +38,12 @@ export const apiFetch = async (endpoint, options = {}) => {
         headers,
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+        if (response.status === 401) {
+            localStorage.removeItem('token');
+        }
         throw new Error(data.message || 'Terjadi kesalahan pada server.');
     }
 

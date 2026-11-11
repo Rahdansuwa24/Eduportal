@@ -32,17 +32,27 @@ export const LoginPage = () => {
         }
     };
 
-    const handleQuickLogin = (roleKey) => {
+    const handleQuickLogin = async (roleKey) => {
         const dummyEmails = {
             admin: 'admin@sekolah.sch.id',
             waka: 'waka@sekolah.sch.id',
             guru: 'budi@sekolah.sch.id',
             siswa: 'siti@sekolah.sch.id',
         };
-        setEmail(dummyEmails[roleKey]);
-        setPassword('password123');
-        switchDemoRole(roleKey);
-        navigate(`/${roleKey}`);
+        const targetEmail = dummyEmails[roleKey];
+        const targetPass = 'password123';
+        setEmail(targetEmail);
+        setPassword(targetPass);
+        setLoading(true);
+        setError('');
+        try {
+            const data = await login(targetEmail, targetPass);
+            navigate(`/${data.user.role}`);
+        } catch (err) {
+            setError(err.message || 'Gagal masuk secara instan! Pastikan backend aktif.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
