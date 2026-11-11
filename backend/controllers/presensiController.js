@@ -67,6 +67,17 @@ const submitPresensiSiswa = async (req, res) => {
 
         const jadwal = kurikulumCheck.rows[0];
         const now = new Date();
+
+        // Validasi Hari: Pastikan mapel yang di-absen dijadwalkan pada hari ini
+        const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const currentDayName = dayNames[now.getDay()];
+
+        if (jadwal.hari && jadwal.hari.toLowerCase() !== currentDayName.toLowerCase()) {
+            return res.status(400).json({
+                message: `Presensi mata pelajaran "${jadwal.nama_mapel}" hanya dibuka pada hari ${jadwal.hari}. Hari ini adalah hari ${currentDayName}.`
+            });
+        }
+
         const currentTimeStr = now.toTimeString().split(' ')[0]; // 'HH:mm:ss'
 
         // Cek Keterlambatan: Jika absen lebih dari 15 menit setelah waktu_mulai mapel
