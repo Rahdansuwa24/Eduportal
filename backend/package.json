@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "seed": "node ./config/seedData.js",
+    "init-db": "node ./config/initDb.js",
     "check-models": "node ./scripts/checkModels.js"
   },
   "dependencies": {

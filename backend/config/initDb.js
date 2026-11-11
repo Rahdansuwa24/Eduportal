@@ -1,5 +1,6 @@
 const db = require('./db');
 const bcrypt = require('bcryptjs');
+const { seedComprehensiveData } = require('./seedData');
 
 const initDatabase = async () => {
   try {
@@ -164,46 +165,8 @@ const initDatabase = async () => {
 
     console.log('✅ Berhasil! Seluruh Tabel Database telah dibuat.');
 
-    // Masukkan Seed Data Dummy awal jika belum ada
-    const userCheck = await db.query('SELECT COUNT(*) FROM users');
-    if (parseInt(userCheck.rows[0].count) === 0) {
-      const defaultPasswordHash = await bcrypt.hash('password123', 10);
-
-      await db.query(`
-        INSERT INTO users (nama, email, password_hash, role, tingkat_kelas, is_active) VALUES
-        ('Admin Utama', 'admin@sekolah.sch.id', '${defaultPasswordHash}', 'admin', 'staff', true),
-        ('Waka Kurikulum', 'waka@sekolah.sch.id', '${defaultPasswordHash}', 'waka', 'staff', true),
-        ('Pak Budi (Guru Math)', 'budi@sekolah.sch.id', '${defaultPasswordHash}', 'guru', 'staff', true),
-        ('Siti Rahma (Siswa Kelas 10)', 'siti@sekolah.sch.id', '${defaultPasswordHash}', 'siswa', '10', true),
-        ('Ahmad Fauzi (Siswa Kelas 11)', 'ahmad@sekolah.sch.id', '${defaultPasswordHash}', 'siswa', '11', false);
-      `);
-
-      await db.query(`
-        INSERT INTO mapel (nama_mapel, kode_mapel, tingkat_kelas, jurusan, tipe_mapel) VALUES
-        ('Matematika Wajib X', 'MTK-10-W', '10', 'UMUM', 'wajib'),
-        ('Fisika Peminatan XI', 'FIS-11-P', '11', 'IPA', 'peminatan'),
-        ('Ekonomi Peminatan XII', 'EKO-12-P', '12', 'IPS', 'peminatan');
-      `);
-
-      await db.query(`
-        INSERT INTO kurikulum (mapel_id, hari, waktu_mulai, waktu_selesai, ruangan, tahun_ajaran, semester) VALUES
-        (1, 'Senin', '07:30:00', '09:00:00', 'Ruang 10 IPA 1', '2026/2027', 'Ganjil'),
-        (2, 'Selasa', '09:15:00', '10:45:00', 'Lab Fisika', '2026/2027', 'Ganjil'),
-        (3, 'Rabu', '11:00:00', '12:30:00', 'Ruang 12 IPS 2', '2026/2027', 'Ganjil');
-      `);
-
-      await db.query(`
-        INSERT INTO hasil_ujian (siswa_id, ujian_id, skor, semester) VALUES
-        (4, NULL, 78.50, 1),
-        (4, NULL, 82.00, 2),
-        (4, NULL, 80.00, 3),
-        (4, NULL, 88.50, 4),
-        (4, NULL, 91.00, 5),
-        (4, NULL, 95.00, 6);
-      `);
-
-      console.log('🎉 Seed Data Dummy Kurikulum Berhasil Dimasukkan!');
-    }
+    // Jalankan seeding data dummy komprehensif (idempotent, aman jika sudah ada data)
+    await seedComprehensiveData();
 
     process.exit(0);
   } catch (err) {
